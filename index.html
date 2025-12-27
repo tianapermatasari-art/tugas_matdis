@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Pemecah Logika Inferensi Lengkap</title>
+
+<style>
+    body{ font-family: Arial, sans-serif; background:#0f2027; color:white; padding:20px; }
+    .container{ max-width:900px; margin:auto; background:#111; padding:25px; border-radius:10px; }
+    textarea,button{ width:100%; padding:12px; font-size:16px; border-radius:6px; border:none; margin-top:10px; }
+    button{ background:#0d6efd; color:white; cursor:pointer; }
+    button:hover{background:#084298;}
+    .result{ margin-top:20px; padding:15px; background:#1c1c1c; border-left:5px solid #0d6efd; }
+    .valid{color:#00ff9c;font-weight:bold;}
+    .invalid{color:#ff4d4d;font-weight:bold;}
+</style>
+</head>
+
+<body>
+<div class="container">
+    <h1>Pemecah Soal Logika Inferensi</h1>
+
+    <p><b>Masukkan soal (1 premis per baris):</b></p>
+    <textarea id="soal" rows="6"
+    placeholder="Contoh:
+jika saya belajar, maka saya lulus ujian
+saya tidak lulus ujian"></textarea>
+
+    <button onclick="pecahkan()">Pecahkan Soal</button>
+    <button onclick="hapusSoal()">Hapus</button>
+
+    <div id="output"></div>
+</div>
+
+<script>
+// ================= NORMALISASI =================
+function norm(teks){
+    return teks
+        .toLowerCase()
+        .replace(/[.,]/g,"")
+        .replace(/\s+/g," ")
+        .trim();
+}
+
+// ================= UTAMA =================
+function pecahkan(){
+    const baris = document.getElementById("soal").value
+        .split("\n")
+        .map(b => norm(b))
+        .filter(b => b !== "");
+
+    let hasil = "";
+    if (baris.length < 2) return;
+
+    // --- 1. PRIORITAS: SILOGISME HIPOTETIK (Cek jika ada 2 'jika') ---
+    if(baris[0].startsWith("jika") && baris[1].startsWith("jika")){
+        const p1 = baris[0].replace("jika","").split("maka");
+        const p2 = baris[1].replace("jika","").split("maka");
+        
+        if(p1.length >= 2 && p2.length >= 2){
+            const p = p1[0].trim();
+            const q = p1[1].trim();
+            const p2_awal = p2[0].trim();
+            const r = p2[1].trim();
+
+            // Cek keterhubungan q dan p2 (fleksibel)
+            if(q.includes(p2_awal) || p2_awal.includes(q) || q.split(" ").some(kata => p2_awal.includes(kata))){
+                hasil = tampil("Silogisme Hipotetik", `jika ${p} maka ${r}`, true);
+            } else {
+                hasil = tampil("Silogisme Hipotetik", "-", false);
+            }
+        }
+    }
+
+    // --- 2. DISJUNCTIVE SYLLOGISM (Cek jika ada 'atau') ---
+    else if(baris[0].includes(" atau ")){
+        const pilihan = baris[0].split(" atau ").map(x => x.trim());
+        const premis2 = baris[1];
+
+        // Logika lebih pintar: cek jika premis 2 mengandung "tidak" DAN salah satu kata kunci dari pilihan
+        const kataKunci1 = pilihan[0].split(" ").pop(); // ambil kata terakhir (misal: "kampus")
+        const kataKunci2 = pilihan[1].split(" ").pop(); // ambil kata terakhir (misal: "dirumah")
+
+        if(premis2.includes("tidak") && premis2.includes(kataKunci1)){
+            hasil = tampil("Disjunctive Syllogism", pilihan[1], true);
+        }
+        else if(premis2.includes("tidak") && premis2.includes(kataKunci2)){
+            hasil = tampil("Disjunctive Syllogism", pilihan[0], true);
+        } else {
+            hasil = tampil("Disjunctive Syllogism", "-", false);
+        }
+    }
+
+    // --- 3. MODUS PONENS & TOLLENS ---
+    else if(baris[0].startsWith("jika") && baris[0].includes("maka")){
+        const bagian = baris[0].replace("jika", "").split("maka");
+        const p = bagian[0].trim();
+        const q = bagian[1].trim();
+        const premis2 = baris[1];
+
+        if(premis2.includes(p) || p.includes(premis2)){
+            hasil = tampil("Modus Ponens", q, true);
+        } 
+        else if(premis2.includes("tidak")){
+            hasil = tampil("Modus Tollens", "tidak " + p, true);
+        } else {
+            hasil = tampil("Modus Ponens / Modus Tollens", "-", false);
+        }
+    }
+
+    document.getElementById("output").innerHTML = hasil || tampil("Error", "Format tidak dikenali", false);
+}
+
+// ================= OUTPUT =================
+function tampil(jenis, kesimpulan, valid){
+    return `
+    <div class="result">
+        <b>Jenis Inferensi:</b> ${jenis}<br><br>
+        <b>Kesimpulan:</b> <span style="text-transform: capitalize;">${kesimpulan}</span><br><br>
+        Inferensi:
+        <span class="${valid ? 'valid' : 'invalid'}">
+        ${valid ? 'VALID' : 'TIDAK VALID'}
+        </span>
+    </div>`;
+}
+
+function hapusSoal(){
+    document.getElementById("soal").value = "";
+    document.getElementById("output").innerHTML = "";
+}
+</script>
+</body>
+</html>
